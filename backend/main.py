@@ -3,11 +3,20 @@ from pydantic import BaseModel
 from dependencies import get_dfs, get_models
 from pipeline import pipeline_forecast
 import pandas as pd
+from fastapi.middleware.cors import CORSMiddleware
+
 
 app = FastAPI(
     title="Crime Hotspot API",
     description="API para previsão de hotspots de crimes",
     version="1.0.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 class ForecastRequest(BaseModel):
