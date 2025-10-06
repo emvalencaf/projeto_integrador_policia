@@ -1,7 +1,8 @@
-from fastapi import Depends, FastAPI, HTTPException
-from pydantic import BaseModel
-from dependencies import get_dfs, get_models
-from pipeline import pipeline_forecast
+from io import BytesIO
+from typing import Annotated
+from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile, File
+from pipeline import pipeline_crime_hotspot
+from dependencies import get_models
 import pandas as pd
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -18,50 +19,51 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-class ForecastRequest(BaseModel):
-    hotspot_id: float
-    city: str
-    horizon: int = 7  # número de dias a prever
-
-class ForecastAll(BaseModel):
-    city: str
-    horizon: int = 7
-
+    
 @app.post("/forecast")
-def forecast(request: ForecastRequest,
-             models=Depends(get_models),
-             dfs=Depends(get_dfs)):
-    df = dfs.get(request.city, None)
-    hotspot_data = df[df["hotspot_id"] == float(request.hotspot_id)].copy()
+async def forecast(
+    city: Annotated[str, Form(...)],
+    days: Annotated[int, Form(...)],
+    file: Annotated[UploadFile, File(...)],
+    models=Depends(get_models),
+):
+    city_models = models.get(city.lower(), None)
+    
+    if not city_models:
+        raise HTTPException(status_code=400, detail=f"Não há modelos treinados para a cidade: {city}")
+    
+    if file is None:
+        raise HTTPException(status_code=400, detail="Envie um arquivo .csv ou .xlsx")
+    
+    if file.filename is None:
+        raise HTTPException(status_code=400, detail="Envie um arquivo .csv ou .xlsx")
+    
+    filename = file.filename.lower()
+    
+    suffix = filename.split(".")[-1]
+    
+    if not suffix in ["csv", "xlsx"]:
+        raise HTTPException(status_code=400, detail="Envie um arquivo .csv ou .xlsx")
 
-    models_city = models.get(request.city)
-    model = models_city.get(str(request.hotspot_id))
-    forecast = pipeline_forecast(days=request.horizon,
-                      df=hotspot_data,
-                      hotspot_id=request.hotspot_id,
-                      model=model)
+    content = await file.read()
     
-    return forecast.to_dict(orient="records")
-
-@app.post("/forecast_all")
-def forecast_all(request: ForecastAll,
-                 models=Depends(get_models),
-                 dfs=Depends(get_dfs)):
-    df = dfs.get(request.city)
+    bytes_io = BytesIO(content)
     
-    models_city = models.get(request.city)
+    try:
+        df = pd.read_csv(bytes_io) if suffix == "csv" else pd.read_excel(bytes_io)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Erro ao ler o arquivo. Verifique o formato e o conteúdo.")
     
-    all = []
-    for hotspot_id, model in models_city.items():
-        print("predicting... ", hotspot_id)
-        hotspot_data = df[df["hotspot_id"] == float(hotspot_id)].copy()
-        forecast = pipeline_forecast(days=request.horizon,
-                      df=hotspot_data,
-                      hotspot_id=hotspot_id,
-                      model=model)
-        all.append(forecast)
+    if "latitude" not in df.columns or "longitude" not in df.columns or "data_ocorrencia" not in df.columns:
+        raise HTTPException(status_code=400, detail="O arquivo deve conter as colunas: latitude, longitude, data_ocorrencia")
     
-    forecast_map = pd.concat(all, ignore_index=True)
+    df["data_ocorrencia"] = pd.to_datetime(df["data_ocorrencia"], errors='coerce')
     
-    return forecast_map.to_dict(orient="records")
+    if df["data_ocorrencia"].isnull().all():
+        raise HTTPException(status_code=400, detail="A coluna 'data_ocorrencia' deve conter datas válidas.")
+    try:
+        forecast = pipeline_crime_hotspot(df=df, days=days, models=city_models)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao processar a previsão: {str(e)}")
+    
+    return {"forecast": forecast}
