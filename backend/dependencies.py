@@ -6,4 +6,5 @@ models_path = Path("../ml/models")
 models = load_models(models_path=models_path)
 
 def get_models():
+    print(models)
     return models
