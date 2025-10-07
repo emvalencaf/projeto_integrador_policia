@@ -185,33 +185,8 @@ if operacao == "Carregar Previsões":
                                 }
                             ).add_to(m)
                             
-                            # Adicionar marcadores para os top 15 hotspots mais críticos
-                            top_hotspots = df_map.nlargest(15, 'mean_crimes')
-                            for idx, row in top_hotspots.iterrows():
-                                folium.CircleMarker(
-                                    location=[row['latitude'], row['longitude']],
-                                    radius=6,
-                                    popup=folium.Popup(
-                                        f"<b>Hotspot ID:</b> {row['hotspot_id']}<br>"
-                                        f"<b>Total Crimes:</b> {row['mean_crimes']:.1f}<br>"
-                                        f"<b>Lat:</b> {row['latitude']:.4f}<br>"
-                                        f"<b>Lon:</b> {row['longitude']:.4f}",
-                                        max_width=200
-                                    ),
-                                    tooltip=f"Hotspot {row['hotspot_id']}: {row['mean_crimes']:.0f} crimes",
-                                    color='darkred',
-                                    fill=True,
-                                    fillColor='red',
-                                    fillOpacity=0.8,
-                                    weight=2
-                                ).add_to(m)
-                            
                             # Exibir mapa
                             st_folium(m, width=1200, height=600, key="heatmap_loaded")
-                            
-                            # Legenda e informações
-                            st.info("🔴 **Vermelho/Laranja:** Alta concentração de crimes | 🟢 **Verde/Ciano:** Média concentração | 🔵 **Azul:** Baixa concentração")
-                            st.caption("💡 Os pontos vermelhos marcam os 15 hotspots mais críticos. Passe o mouse ou clique para ver detalhes.")
                             
                 
                 except Exception as e:
@@ -426,33 +401,9 @@ else:  # Fazer Previsão
                                     }
                                 ).add_to(m)
                                 
-                                # Adicionar marcadores para os top 15 hotspots mais críticos
-                                top_hotspots = df_map.nlargest(15, 'mean_crimes')
-                                for idx, row in top_hotspots.iterrows():
-                                    folium.CircleMarker(
-                                        location=[row['latitude'], row['longitude']],
-                                        radius=6,
-                                        popup=folium.Popup(
-                                            f"<b>Hotspot ID:</b> {row['hotspot_id']}<br>"
-                                            f"<b>Total Crimes:</b> {row['mean_crimes']:.1f}<br>"
-                                            f"<b>Lat:</b> {row['latitude']:.4f}<br>"
-                                            f"<b>Lon:</b> {row['longitude']:.4f}",
-                                            max_width=200
-                                        ),
-                                        tooltip=f"Hotspot {row['hotspot_id']}: {row['mean_crimes']:.0f} crimes",
-                                        color='darkred',
-                                        fill=True,
-                                        fillColor='red',
-                                        fillOpacity=0.8,
-                                        weight=2
-                                    ).add_to(m)
-                                
                                 # Exibir mapa
                                 st_folium(m, width=1200, height=600, key="heatmap_loaded")
                                 
-                                # Legenda e informações
-                                st.info("🔴 **Vermelho/Laranja:** Alta concentração de crimes | 🟢 **Verde/Ciano:** Média concentração | 🔵 **Azul:** Baixa concentração")
-                                st.caption("💡 Os pontos vermelhos marcam os 15 hotspots mais críticos. Passe o mouse ou clique para ver detalhes.")
                     
                     except Exception as e:
                         st.error(f"Erro ao criar mapa: {str(e)}")
