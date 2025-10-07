@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 import json
 from datetime import datetime
 import folium
+from config import BACKEND_URL
 from folium.plugins import HeatMapWithTime, HeatMap
 from streamlit_folium import st_folium
 import requests
@@ -130,7 +131,7 @@ if operacao == "Carregar Previsões":
             else:
                 try:
                     # Tabs para diferentes visualizações
-                    tab1, tab2 = st.tabs(["📊 Mapa Agregado", "⏱️ Animação Temporal"])
+                    tab1, _ = st.tabs(["📊 Mapa Agregado", "⏱️ Animação Temporal"])
                     
                     with tab1:
                         # Agregar crimes por localização (somar ao longo do tempo)
@@ -298,12 +299,8 @@ else:  # Fazer Previsão
             )
             
             # URL da API (pode ser configurável)
-            api_url = st.text_input(
-                "URL da API:",
-                value="http://localhost:8000/forecast",
-                help="Endpoint da API de previsão"
-            )
-            
+            api_url = f"{BACKEND_URL}/forecast"
+            print(api_url)
             st.markdown("---")
             
             # Botão para processar
